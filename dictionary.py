@@ -173,7 +173,95 @@ class DictionaryApp:
             self.filter_entries
         )
 
+        # =================================================
+        # FILTER BAR
+        # =================================================
+
+        filter_frame = tk.Frame(left_panel)
+        filter_frame.pack(
+            fill="x",
+            pady=(0, PADY)
+        )
+
+        tk.Label(
+            filter_frame,
+            text="Filter by:"
+        ).pack(side="left")
+
+        # FILTER TYPE DROPDOWN
+
+        self.filter_type = ttk.Combobox(
+            filter_frame,
+            values=[
+                "Rank",
+                "Frequency",
+                "Dispersion"
+            ],
+            state="readonly",
+            width=12
+        )
+
+        self.filter_type.pack(
+            side="left",
+            padx=(5, 5)
+        )
+
+        self.filter_type.set("Rank")
+
+        # MIN INPUT
+
+        tk.Label(
+            filter_frame,
+            text="Min"
+        ).pack(side="left")
+
+        self.filter_min = tk.Entry(
+            filter_frame,
+            width=10
+        )
+
+        self.filter_min.pack(
+            side="left",
+            padx=(5, 10)
+        )
+
+        # MAX INPUT
+
+        tk.Label(
+            filter_frame,
+            text="Max"
+        ).pack(side="left")
+
+        self.filter_max = tk.Entry(
+            filter_frame,
+            width=10
+        )
+
+        self.filter_max.pack(
+            side="left",
+            padx=(5, 0)
+        )
+
+        # LIVE FILTER EVENTS
+
+        self.filter_type.bind(
+            "<<ComboboxSelected>>",
+            self.filter_entries
+        )
+
+        self.filter_min.bind(
+            "<KeyRelease>",
+            self.filter_entries
+        )
+
+        self.filter_max.bind(
+            "<KeyRelease>",
+            self.filter_entries
+        )
+
+        # =================================================
         # STATUS LABEL
+        # =================================================
 
         self.status_label = tk.Label(
             left_panel,
@@ -396,22 +484,89 @@ class DictionaryApp:
 
     def populate_tree(self, filter_text=""):
 
+        # CLEAR TREE
+
         for item in self.tree.get_children():
             self.tree.delete(item)
 
         filtered = self.entries
 
-        if filter_text:
+        # =================================================
+        # SEARCH FILTER
+        # =================================================
 
+        if filter_text:
             filter_text = filter_text.lower()
 
             filtered = [
-                entry for entry in self.entries
+                entry for entry in filtered
                 if filter_text in entry["lemma"].lower()
             ]
 
+        # =================================================
+        # FILTER TYPE
+        # =================================================
+
+        filter_type = self.filter_type.get()
+
+        # MAP UI NAME -> ENTRY KEY
+
+        field_map = {
+            "Rank": "rank",
+            "Frequency": "freq",
+            "Dispersion": "dispersion"
+        }
+
+        field = field_map.get(filter_type)
+
+        # =================================================
+        # PARSE MIN/MAX
+        # =================================================
+
+        min_value = self.filter_min.get().strip()
+        max_value = self.filter_max.get().strip()
+
+        try:
+            min_value = float(min_value) if min_value else None
+        except:
+            min_value = None
+
+        try:
+            max_value = float(max_value) if max_value else None
+        except:
+            max_value = None
+
+        # =================================================
+        # APPLY FILTERS
+        # =================================================
+
+        final_filtered = []
+
         for entry in filtered:
 
+            value = entry[field]
+
+            # MIN CHECK
+
+            if min_value is not None:
+
+                if value < min_value:
+                    continue
+
+            # MAX CHECK
+
+            if max_value is not None:
+
+                if value > max_value:
+                    continue
+
+            final_filtered.append(entry)
+
+        # =================================================
+        # INSERT ROWS
+        # =================================================
+
+        for entry in final_filtered:
             pos_name = POS_MAP.get(
                 entry["pos"].lower(),
                 entry["pos"]
@@ -428,6 +583,14 @@ class DictionaryApp:
                     f"{entry['dispersion']:.2f}"
                 )
             )
+
+        # =================================================
+        # STATUS
+        # =================================================
+
+        self.status_label.config(
+            text=f"{len(final_filtered):,} results"
+        )
 
     # =====================================================
     # FILTER
