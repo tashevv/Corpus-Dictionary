@@ -13,4 +13,4 @@ corpus_dictionary/\
 ├── dictionary_screenshot.png\
 └── run.bat	# Run this to start
 
-![demo](dictionary_screenshot.png)
+![demo](corpus_dictionary_screenshot.png)
