@@ -1,4 +1,5 @@
 import os
+import subprocess
 import csv
 import requests
 
@@ -133,6 +134,8 @@ class DictionaryApp:
 
         self.entries = []
         self.flagged_ranks = set()
+
+        self.current_word = ""
 
         self.build_ui()
         self.load_flags()
@@ -562,15 +565,33 @@ class DictionaryApp:
             expand=True
         )
 
+        title_frame = tk.Frame(right_panel)
+
+        title_frame.pack(
+            anchor="nw",
+            fill="x",
+            pady=(0, 10)
+        )
+
         self.word_title = tk.Label(
-            right_panel,
+            title_frame,
             text="Select a word",
             font=("Arial", 22, "bold")
         )
 
         self.word_title.pack(
-            anchor="nw",
-            pady=(0, 10)
+            side="left"
+        )
+
+        self.speak_button = tk.Button(
+            title_frame,
+            text="🔊",
+            command=self.speak_word
+        )
+
+        self.speak_button.pack(
+            side="left",
+            padx=(10, 0)
         )
 
         self.meta_label = tk.Label(
@@ -830,6 +851,7 @@ class DictionaryApp:
         values = item["values"]
 
         word = values[1]
+        self.current_word = word
         pos = values[2]
         freq = values[3]
         dispersion = values[4]
@@ -873,6 +895,42 @@ class DictionaryApp:
         )
 
         self.update_flag_button()
+
+    # =====================================================
+    # SPEAK WORD
+    # =====================================================
+
+    def speak_word(self):
+
+        if not self.current_word:
+            return
+
+        try:
+
+            text = self.current_word.replace('"', '')
+
+            command = f'''
+Add-Type -AssemblyName System.Speech
+$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$speak.Speak("{text}")
+'''
+
+            subprocess.run(
+                [
+                    "powershell",
+                    "-Command",
+                    command
+                ],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
+        except Exception as e:
+
+            messagebox.showerror(
+                "Speech Error",
+                f"Failed to vocalize word:\n{e}"
+            )
+
 
 
 # =========================================================
