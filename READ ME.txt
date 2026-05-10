@@ -3,7 +3,7 @@ Corpus Dictionary v1.0
 corpus_dictionary/
 ├── READ ME.txt
 ├── data/
-│   └── dictionary.txt
+│   ├── dictionary.txt
+│   └── flagged_ranks.txt
 ├── dictionary.py
-├── dictionary_screenshot.png
 └── run.bat	# Run this to start
