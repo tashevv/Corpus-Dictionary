@@ -8,9 +8,9 @@ Dictionary API is from www.dictionaryapi.dev
 corpus_dictionary/\
 ├── READ ME.txt\
 ├── data/\
-│   └── dictionary.txt\
+│   ├── dictionary.txt\
+│   └── flagged_ranks.txt\
 ├── dictionary.py\
-├── dictionary_screenshot.png\
 └── run.bat	# Run this to start
 
 ![demo](corpus_dictionary_screenshot_2.png)
