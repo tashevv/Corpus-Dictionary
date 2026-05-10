@@ -781,8 +781,22 @@ class DictionaryApp:
         # STATUS
         # =================================================
 
+        flagged_count = len(self.flagged_ranks)
+        total_count = len(self.entries)
+
+        flagged_percent = 0
+
+        if total_count > 0:
+            flagged_percent = (
+                                      flagged_count / len(final_filtered)
+                              ) * 100
+
         self.status_label.config(
-            text=f"{len(final_filtered):,} results"
+            text=(
+                f"{len(final_filtered):,} results   |   "
+                f"Flagged: {flagged_count:,} "
+                f"({flagged_percent:.2f}%)"
+            )
         )
 
     # =====================================================
