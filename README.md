@@ -13,4 +13,4 @@ corpus_dictionary/\
 ├── dictionary.py\
 └── run.bat	# Run this to start
 
-![demo](corpus_dictionary_screenshot_3.png)
+![demo](corpus_dictionary_screenshot_4.png)
