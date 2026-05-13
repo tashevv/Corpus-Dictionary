@@ -128,6 +128,7 @@ class DictionaryApp:
     def __init__(self, root):
 
         self.root = root
+        root.iconbitmap("book.ico")
         self.root.title("Corpus Dictionary v1.0")
         self.root.geometry("1000x500")
         self.root.minsize(1000, 500)
