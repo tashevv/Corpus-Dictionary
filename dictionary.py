@@ -2,6 +2,7 @@ import os
 import subprocess
 import csv
 import requests
+import ctypes
 
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -128,10 +129,10 @@ class DictionaryApp:
     def __init__(self, root):
 
         self.root = root
-        root.iconbitmap("book.ico")
-        self.root.title("Corpus Dictionary v1.0")
-        self.root.geometry("1000x500")
-        self.root.minsize(1000, 500)
+        root.iconbitmap("icon.ico")
+        self.root.title("Corpus Dictionary")
+        self.root.geometry("1000x450")
+        self.root.minsize(1000, 450)
 
         self.entries = []
         self.flagged_ranks = set()
@@ -479,19 +480,19 @@ class DictionaryApp:
 
         self.tree.column(
             "PoS",
-            width=120,
+            width=80,
             anchor="center"
         )
 
         self.tree.column(
             "Freq",
-            width=120,
+            width=80,
             anchor="e"
         )
 
         self.tree.column(
             "Disp",
-            width=60,
+            width=80,
             anchor="center"
         )
 
@@ -821,7 +822,7 @@ class DictionaryApp:
         self.status_label.config(
             text=(
                 f"{shown_count:,} results   |   "
-                f"Flagged: {shown_flagged_count:,} "
+                f"{shown_flagged_count:,} flagged "
                 f"({flagged_percent:.2f}%)"
             )
         )
@@ -932,7 +933,10 @@ $speak.Speak("{text}")
                 f"Failed to vocalize word:\n{e}"
             )
 
-
+# IMPORTANT: set BEFORE Tk()
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+    "corpus.dictionary.app"
+)
 
 # =========================================================
 # MAIN
