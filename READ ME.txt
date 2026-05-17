@@ -11,17 +11,3 @@ corpus_dictionary/
 ├── dictionary.py
 ├── icon.ico
 └── lib/
-=======
-Corpus Dictionary
-
-corpus_dictionary/
-├── .git/
-├── READ ME.txt
-├── Run.bat	# Run this to start
-├── corpus_dictionary_screenshot.png
-├── data/
-│   ├── dictionary.txt
-│   └── flagged_ranks.txt
-├── dictionary.py
-├── icon.ico
-└── lib/
