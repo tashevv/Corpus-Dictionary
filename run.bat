@@ -1,5 +1,6 @@
-@Echo off
+@echo off
 
-start pythonw dictionary.py
+echo Starting dictionary...
+start "Corpus Dictionary" pythonw dictionary.py
 
 exit

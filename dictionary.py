@@ -1,15 +1,23 @@
+import sys
 import os
+import subprocess
 import csv
-import requests
-
+import ctypes
 import tkinter as tk
 from tkinter import ttk, messagebox
+
+# Add the local 'lib' folder to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+
+import requests
+
 
 # =========================================================
 # CONFIG
 # =========================================================
 
 DICTIONARY_PATH = os.path.join("data", "dictionary.txt")
+FLAGS_PATH = os.path.join("data", "flagged_ranks.txt")
 
 POS_MAP = {
     "n": "Noun",
@@ -85,6 +93,7 @@ def fetch_definition(word):
     url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
 
     try:
+
         response = requests.get(url, timeout=5)
 
         if response.status_code != 200:
@@ -125,44 +134,191 @@ class DictionaryApp:
     def __init__(self, root):
 
         self.root = root
-        self.root.title("Corpus Dictionary v1.0")
-        self.root.geometry("980x560")
-        self.root.minsize(980, 560)
+        root.iconbitmap("icon.ico")
+        self.root.title("Corpus Dictionary")
+        self.root.geometry("1000x450")
+        self.root.minsize(1000, 450)
 
         self.entries = []
+        self.flagged_ranks = set()
+
+        self.current_word = ""
 
         self.build_ui()
+        self.load_flags()
         self.load_data()
 
+    # =====================================================
+    # FLAGS
+    # =====================================================
+
+    def load_flags(self):
+
+        self.flagged_ranks = set()
+
+        if not os.path.exists(FLAGS_PATH):
+            return
+
+        try:
+
+            with open(
+                    FLAGS_PATH,
+                    "r",
+                    encoding="utf-8"
+            ) as f:
+
+                for line in f:
+
+                    line = line.strip()
+
+                    if not line:
+                        continue
+
+                    try:
+                        self.flagged_ranks.add(int(line))
+                    except:
+                        pass
+
+        except:
+            pass
+
     # -----------------------------------------------------
+
+    def save_flags(self):
+
+        try:
+
+            os.makedirs(
+                os.path.dirname(FLAGS_PATH),
+                exist_ok=True
+            )
+
+            with open(
+                    FLAGS_PATH,
+                    "w",
+                    encoding="utf-8"
+            ) as f:
+
+                for rank in sorted(self.flagged_ranks):
+                    f.write(str(rank) + "\n")
+
+        except Exception as e:
+
+            messagebox.showerror(
+                "Save Error",
+                f"Failed to save flags:\n{e}"
+            )
+
+    # -----------------------------------------------------
+
+    def toggle_flag(self):
+
+        selected = self.tree.selection()
+
+        if not selected:
+            return
+
+        item = self.tree.item(selected[0])
+
+        rank = int(item["values"][0])
+
+        if rank in self.flagged_ranks:
+            self.flagged_ranks.remove(rank)
+        else:
+            self.flagged_ranks.add(rank)
+
+        self.save_flags()
+
+        self.filter_entries()
+
+        self.update_flag_button()
+
+    # -----------------------------------------------------
+
+    def update_flag_button(self):
+
+        selected = self.tree.selection()
+
+        if not selected:
+            self.flag_button.config(
+                text="Toggle Flag"
+            )
+
+            return
+
+        item = self.tree.item(selected[0])
+
+        rank = int(item["values"][0])
+
+        if rank in self.flagged_ranks:
+
+            self.flag_button.config(
+                text="Unflag Word"
+            )
+
+        else:
+
+            self.flag_button.config(
+                text="Flag Word"
+            )
+
+    # =====================================================
+    # BUILD UI
+    # =====================================================
 
     def build_ui(self):
 
         PADX = 6
         PADY = 6
 
-        root_frame = tk.Frame(self.root, padx=PADX, pady=PADY)
-        root_frame.pack(fill="both", expand=True)
+        root_frame = tk.Frame(
+            self.root,
+            padx=PADX,
+            pady=PADY
+        )
+
+        root_frame.pack(
+            fill="both",
+            expand=True
+        )
 
         # =================================================
         # LEFT PANEL
         # =================================================
 
-        left_panel = tk.Frame(root_frame, width=560)
-        left_panel.pack(side="left", fill="y")
+        left_panel = tk.Frame(
+            root_frame,
+            width=560
+        )
+
+        left_panel.pack(
+            side="left",
+            fill="y"
+        )
+
         left_panel.pack_propagate(False)
 
+        # =================================================
         # SEARCH BAR
+        # =================================================
 
         search_frame = tk.Frame(left_panel)
-        search_frame.pack(fill="x", pady=(0, PADY))
+
+        search_frame.pack(
+            fill="x",
+            pady=(0, PADY)
+        )
 
         tk.Label(
             search_frame,
             text="Search:"
         ).pack(side="left")
 
-        self.search_entry = tk.Entry(search_frame, width=80)
+        self.search_entry = tk.Entry(
+            search_frame,
+            width=80
+        )
+
         self.search_entry.pack(
             side="left",
             padx=(5, 0)
@@ -173,7 +329,106 @@ class DictionaryApp:
             self.filter_entries
         )
 
+        # =================================================
+        # FILTER BAR
+        # =================================================
+
+        filter_frame = tk.Frame(left_panel)
+
+        filter_frame.pack(
+            fill="x",
+            pady=(0, PADY)
+        )
+
+        tk.Label(
+            filter_frame,
+            text="Filter by:"
+        ).pack(side="left")
+
+        self.filter_type = ttk.Combobox(
+            filter_frame,
+            values=[
+                "Rank",
+                "Frequency",
+                "Dispersion"
+            ],
+            state="readonly",
+            width=12
+        )
+
+        self.filter_type.pack(
+            side="left",
+            padx=(5, 5)
+        )
+
+        self.filter_type.set("Rank")
+
+        tk.Label(
+            filter_frame,
+            text="Min"
+        ).pack(side="left")
+
+        self.filter_min = tk.Entry(
+            filter_frame,
+            width=10
+        )
+
+        self.filter_min.pack(
+            side="left",
+            padx=(5, 10)
+        )
+
+        tk.Label(
+            filter_frame,
+            text="Max"
+        ).pack(side="left")
+
+        self.filter_max = tk.Entry(
+            filter_frame,
+            width=10
+        )
+
+        self.filter_max.pack(
+            side="left",
+            padx=(5, 0)
+        )
+
+        self.filter_type.bind(
+            "<<ComboboxSelected>>",
+            self.filter_entries
+        )
+
+        self.filter_min.bind(
+            "<KeyRelease>",
+            self.filter_entries
+        )
+
+        self.filter_max.bind(
+            "<KeyRelease>",
+            self.filter_entries
+        )
+
+        # =================================================
+        # FLAG FILTER
+        # =================================================
+
+        self.show_flagged_only = tk.BooleanVar()
+
+        flagged_checkbox = tk.Checkbutton(
+            left_panel,
+            text="Show flagged only",
+            variable=self.show_flagged_only,
+            command=self.filter_entries
+        )
+
+        flagged_checkbox.pack(
+            anchor="w",
+            pady=(0, PADY)
+        )
+
+        # =================================================
         # STATUS LABEL
+        # =================================================
 
         self.status_label = tk.Label(
             left_panel,
@@ -191,7 +446,11 @@ class DictionaryApp:
         # =================================================
 
         tree_frame = tk.Frame(left_panel)
-        tree_frame.pack(fill="both", expand=True)
+
+        tree_frame.pack(
+            fill="both",
+            expand=True
+        )
 
         columns = (
             "Rank",
@@ -213,8 +472,6 @@ class DictionaryApp:
         self.tree.heading("Freq", text="Frequency")
         self.tree.heading("Disp", text="Dispersion")
 
-        # WIDER COLUMNS
-
         self.tree.column(
             "Rank",
             width=60,
@@ -228,31 +485,27 @@ class DictionaryApp:
 
         self.tree.column(
             "PoS",
-            width=120,
+            width=80,
             anchor="center"
         )
 
         self.tree.column(
             "Freq",
-            width=120,
+            width=80,
             anchor="e"
         )
 
         self.tree.column(
             "Disp",
-            width=60,
+            width=80,
             anchor="center"
         )
-
-        # VERTICAL SCROLLBAR
 
         y_scrollbar = ttk.Scrollbar(
             tree_frame,
             orient="vertical",
             command=self.tree.yview
         )
-
-        # HORIZONTAL SCROLLBAR
 
         x_scrollbar = ttk.Scrollbar(
             tree_frame,
@@ -265,7 +518,10 @@ class DictionaryApp:
             xscrollcommand=x_scrollbar.set
         )
 
-        # GRID LAYOUT
+        self.tree.tag_configure(
+            "flagged",
+            background="#fff2a8"
+        )
 
         self.tree.grid(
             row=0,
@@ -285,8 +541,15 @@ class DictionaryApp:
             sticky="ew"
         )
 
-        tree_frame.grid_rowconfigure(0, weight=1)
-        tree_frame.grid_columnconfigure(0, weight=1)
+        tree_frame.grid_rowconfigure(
+            0,
+            weight=1
+        )
+
+        tree_frame.grid_columnconfigure(
+            0,
+            weight=1
+        )
 
         self.tree.bind(
             "<<TreeviewSelect>>",
@@ -309,15 +572,33 @@ class DictionaryApp:
             expand=True
         )
 
+        title_frame = tk.Frame(right_panel)
+
+        title_frame.pack(
+            anchor="nw",
+            fill="x",
+            pady=(0, 10)
+        )
+
         self.word_title = tk.Label(
-            right_panel,
+            title_frame,
             text="Select a word",
             font=("Arial", 22, "bold")
         )
 
         self.word_title.pack(
-            anchor="nw",
-            pady=(0, 10)
+            side="left"
+        )
+
+        self.speak_button = tk.Button(
+            title_frame,
+            text="🔊",
+            command=self.speak_word
+        )
+
+        self.speak_button.pack(
+            side="left",
+            padx=(10, 0)
         )
 
         self.meta_label = tk.Label(
@@ -332,7 +613,20 @@ class DictionaryApp:
             pady=(0, 10)
         )
 
+        self.flag_button = tk.Button(
+            right_panel,
+            text="Toggle Flag",
+            command=self.toggle_flag,
+            width=18
+        )
+
+        self.flag_button.pack(
+            anchor="nw",
+            pady=(0, 10)
+        )
+
         definition_frame = tk.Frame(right_panel)
+
         definition_frame.pack(
             fill="both",
             expand=True
@@ -396,26 +690,107 @@ class DictionaryApp:
 
     def populate_tree(self, filter_text=""):
 
+        # CLEAR TREE
+
         for item in self.tree.get_children():
             self.tree.delete(item)
 
         filtered = self.entries
+
+        # =================================================
+        # SEARCH FILTER
+        # =================================================
 
         if filter_text:
 
             filter_text = filter_text.lower()
 
             filtered = [
-                entry for entry in self.entries
+                entry for entry in filtered
                 if filter_text in entry["lemma"].lower()
             ]
 
+        # =================================================
+        # FILTER TYPE
+        # =================================================
+
+        filter_type = self.filter_type.get()
+
+        field_map = {
+            "Rank": "rank",
+            "Frequency": "freq",
+            "Dispersion": "dispersion"
+        }
+
+        field = field_map.get(filter_type)
+
+        # =================================================
+        # PARSE MIN/MAX
+        # =================================================
+
+        min_value = self.filter_min.get().strip()
+        max_value = self.filter_max.get().strip()
+
+        try:
+            min_value = float(min_value) if min_value else None
+        except:
+            min_value = None
+
+        try:
+            max_value = float(max_value) if max_value else None
+        except:
+            max_value = None
+
+        # =================================================
+        # APPLY FILTERS
+        # =================================================
+
+        final_filtered = []
+
+        flagged_only = self.show_flagged_only.get()
+
         for entry in filtered:
+
+            value = entry[field]
+
+            # MIN CHECK
+
+            if min_value is not None:
+
+                if value < min_value:
+                    continue
+
+            # MAX CHECK
+
+            if max_value is not None:
+
+                if value > max_value:
+                    continue
+
+            # FLAG FILTER
+
+            if flagged_only:
+
+                if entry["rank"] not in self.flagged_ranks:
+                    continue
+
+            final_filtered.append(entry)
+
+        # =================================================
+        # INSERT ROWS
+        # =================================================
+
+        for entry in final_filtered:
 
             pos_name = POS_MAP.get(
                 entry["pos"].lower(),
                 entry["pos"]
             )
+
+            tags = ()
+
+            if entry["rank"] in self.flagged_ranks:
+                tags = ("flagged",)
 
             self.tree.insert(
                 "",
@@ -426,8 +801,36 @@ class DictionaryApp:
                     pos_name,
                     f"{entry['freq']:,}",
                     f"{entry['dispersion']:.2f}"
-                )
+                ),
+                tags=tags
             )
+
+        # =================================================
+        # STATUS
+        # =================================================
+
+        shown_count = len(final_filtered)
+
+        shown_flagged_count = sum(
+            1
+            for entry in final_filtered
+            if entry["rank"] in self.flagged_ranks
+        )
+
+        flagged_percent = 0
+
+        if shown_count > 0:
+            flagged_percent = (
+                                      shown_flagged_count / shown_count
+                              ) * 100
+
+        self.status_label.config(
+            text=(
+                f"{shown_count:,} results   |   "
+                f"{shown_flagged_count:,} flagged "
+                f"({flagged_percent:.2f}%)"
+            )
+        )
 
     # =====================================================
     # FILTER
@@ -436,6 +839,7 @@ class DictionaryApp:
     def filter_entries(self, event=None):
 
         text = self.search_entry.get()
+
         self.populate_tree(text)
 
     # =====================================================
@@ -454,6 +858,7 @@ class DictionaryApp:
         values = item["values"]
 
         word = values[1]
+        self.current_word = word
         pos = values[2]
         freq = values[3]
         dispersion = values[4]
@@ -496,6 +901,47 @@ class DictionaryApp:
             definition
         )
 
+        self.update_flag_button()
+
+    # =====================================================
+    # SPEAK WORD
+    # =====================================================
+
+    def speak_word(self):
+
+        if not self.current_word:
+            return
+
+        try:
+
+            text = self.current_word.replace('"', '')
+
+            command = f'''
+Add-Type -AssemblyName System.Speech
+$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$speak.Speak("{text}")
+'''
+
+            subprocess.run(
+                [
+                    "powershell",
+                    "-Command",
+                    command
+                ],
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+
+        except Exception as e:
+
+            messagebox.showerror(
+                "Speech Error",
+                f"Failed to vocalize word:\n{e}"
+            )
+
+# IMPORTANT: set BEFORE Tk()
+ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+    "corpus.dictionary.app"
+)
 
 # =========================================================
 # MAIN
