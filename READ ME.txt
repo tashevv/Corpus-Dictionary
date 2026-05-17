@@ -9,4 +9,5 @@ corpus_dictionary/
 │   ├── dictionary.txt
 │   └── flagged_ranks.txt
 ├── dictionary.py
-└── icon.ico
+├── icon.ico
+└── lib/
