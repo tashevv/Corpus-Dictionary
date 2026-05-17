@@ -1,11 +1,16 @@
+import sys
 import os
 import subprocess
 import csv
-import requests
 import ctypes
-
 import tkinter as tk
 from tkinter import ttk, messagebox
+
+# Add the local 'lib' folder to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
+
+import requests
+
 
 # =========================================================
 # CONFIG
